@@ -1,0 +1,16 @@
+# TCGA-LUAD (lung adenocarcinoma) — the default working cohort.
+# ~500+ primary tumors and ~50 solid-tissue-normal RNA-seq samples in GDC.
+extends: default.yaml
+
+project:
+  cohort: TCGA-LUAD
+
+labels:
+  opentargets:
+    disease_id: MONDO_0005061        # lung adenocarcinoma (Open Targets, verified live)
+
+# Known LUAD-relevant targeted-therapy targets used as POSITIVE CONTROLS in drug ranking
+# (verified against DGIdb/DrugBank at runtime; not used as model labels).
+controls:
+  positive_targets: [EGFR, ALK, MET, KRAS, BRAF, ERBB2, ROS1, RET, NTRK1]
+  positive_drugs_examples: [erlotinib, gefitinib, osimertinib, crizotinib, alectinib]

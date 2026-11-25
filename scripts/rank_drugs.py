@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+"""Thin CLI shim: Network-proximity drug ranking with degree-matched null model.
+Real logic lives in src/repurpose_gnn/. See: repurpose_gnn.cli.rank_drugs_main
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Allow running from a plain checkout (no install) by making src/ importable.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from repurpose_gnn.cli import rank_drugs_main  # noqa: E402
+
+if __name__ == "__main__":
+    raise SystemExit(rank_drugs_main())

@@ -1,0 +1,14 @@
+# TCGA-BRCA (breast invasive carcinoma) — alternative cohort.
+# Large tumor cohort (~1000+) and ~110 solid-tissue-normal RNA-seq samples in GDC.
+extends: default.yaml
+
+project:
+  cohort: TCGA-BRCA
+
+labels:
+  opentargets:
+    disease_id: MONDO_0004989        # breast carcinoma (Open Targets, verified live)
+
+controls:
+  positive_targets: [ERBB2, ESR1, PGR, PIK3CA, CDK4, CDK6, PARP1, BRCA1, BRCA2]
+  positive_drugs_examples: [trastuzumab, tamoxifen, palbociclib, olaparib, lapatinib]

@@ -1,0 +1,139 @@
+# Default configuration. Cohort configs (luad.yaml, brca.yaml) `extends: default.yaml`
+# and override only what differs. Override any key from the CLI with `--set key.sub=value`.
+
+project:
+  name: tcga-string-gnn-drug-repurposing
+  cohort: TCGA-LUAD          # overridden by cohort configs
+
+reproducibility:
+  seed: 11
+  seeds: [11, 22, 33, 44, 55]
+  deterministic: true
+
+compute:
+  device: auto              # auto | cpu | cuda | mps
+  num_workers: 0
+
+paths:
+  raw_tcga: data/raw/tcga
+  raw_string: data/raw/string
+  raw_drugbank: data/raw/drugbank
+  external: data/external
+  interim: data/interim
+  processed: data/processed
+  figures: results/figures
+  tables: results/tables
+  models: results/models
+  logs: results/logs
+
+# ---- TCGA / GDC download (Section 7) ----
+gdc:
+  api_base: https://api.gdc.cancer.gov
+  data_category: Transcriptome Profiling
+  data_type: Gene Expression Quantification
+  workflow_type: "STAR - Counts"       # exact GDC enum; validated against /files facets at runtime
+  experimental_strategy: RNA-Seq
+  sample_types:                        # GDC `sample_type` values, grouped into our 2 conditions
+    tumor: ["Primary Tumor"]
+    normal: ["Solid Tissue Normal"]
+  max_samples_per_group: null          # null = all; set an int (e.g. 8) for a fast smoke run
+  dedup_multiple_per_participant: true # keep one sample per (participant, condition)
+  retries: 5
+  timeout_seconds: 120
+  backoff_seconds: 2.0
+
+# ---- Expression preprocessing / QC (Section 9) ----
+expression:
+  count_column: unstranded             # STAR-Counts column: unstranded | stranded_first | stranded_second
+  min_count: 10
+  min_samples_frac: 0.2                # keep gene if count>=min_count in >= this fraction of samples
+  protein_coding_only: true
+
+# ---- Differential expression (Section 10) ----
+differential_expression:
+  design_formula: "~condition"
+  reference_level: normal              # condition levels are {tumor, normal}
+  fdr_threshold: 0.05
+  abs_log2fc_threshold: 1.0
+  lfc_shrink: true
+  cooks_filter: true
+
+# ---- STRING PPI network (Section 12) ----
+string:
+  version: "12.0"
+  species: 9606
+  score_threshold: 700                 # combined score >= 700 (high confidence)
+  network_type: functional             # functional | physical
+  use_bulk_files: true                 # STRING requires bulk download for large-scale use
+  api_base: https://string-db.org
+  drop_textmining_channel: false       # sensitivity: recompute combined score without text mining
+  add_self_loops: false                # GCNConv adds self-loops internally; avoid double-adding
+
+# ---- Disease-gene labels (Sections 2, 15) ----
+labels:
+  source: opentargets                  # opentargets | cosmic_cgc | oncokb | disgenet
+  opentargets:
+    disease_id: MONDO_0005061        # lung adenocarcinoma (Open Targets, verified live)
+    min_association_score: 0.5
+    datatype_scores: overall           # use overall association score
+  cosmic_cgc:
+    tier: [1]                          # Census tiers to treat as positives
+    file: data/external/cosmic/cancer_gene_census.csv
+  negative_sampling: degree_matched    # random | degree_matched
+  positive_unlabeled: true             # unlabeled != negative
+
+# ---- Node features (Section 11) ----
+features:
+  include: [log2fc, neglog10_fdr, mean_expression, expression_variance, effect_size]
+  optional:
+    mutation_frequency: false          # requires somatic MAF download
+    cnv_frequency: false               # requires CNV download
+  clip_neglog10_fdr: 50.0              # cap -log10(FDR) to avoid inf from FDR==0
+
+# ---- Data splitting (Section 15) ----
+split:
+  strategies: [stratified_random, degree_aware]
+  val_frac: 0.15
+  test_frac: 0.15
+
+# ---- GNN model (Section 17) ----
+model:
+  architectures: [gcn, graphsage, gatv2]
+  hidden_channels: 128
+  num_layers: 2
+  dropout: 0.4
+  norm: batchnorm                      # none | batchnorm | layernorm
+  residual: false
+  heads: 4                             # GATv2 attention heads
+
+# ---- Training (Section 18) ----
+train:
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  max_epochs: 500
+  patience: 40
+  grad_clip: 1.0
+  class_weight: balanced               # balanced | none
+
+# ---- Drug sources (Sections 4, 23) ----
+drugs:
+  source: dgidb                        # dgidb | drugbank | opentargets | chembl
+  drugbank_xml: null                   # path to full_database.xml; env DRUGBANK_XML overrides
+  dgidb_api: https://dgidb.org/api/graphql
+  approved_only: true
+  known_action_only: true
+  small_molecule_only: false
+  relationship_types: [target]         # sensitivity: [target, enzyme, carrier, transporter]
+
+# ---- Network proximity (Section 25) ----
+proximity:
+  distance_transform: neglog           # neglog: d=-log(conf) | inverse: d=1/conf
+  n_random: 1000
+  degree_bins: 50
+  module_sizes: [50, 100, 250, 500]
+  fdr_threshold: 0.05
+
+# ---- Pathway enrichment (Section 22) ----
+enrichment:
+  libraries: [Reactome_2022, GO_Biological_Process_2023, KEGG_2021_Human]
+  use_analysis_background: true        # background = expressed+mapped genes, NOT whole genome

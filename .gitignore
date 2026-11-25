@@ -1,0 +1,41 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# --- caches / tooling ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.DS_Store
+
+# --- data (large / license-restricted; never commit) ---
+data/raw/**
+data/interim/**
+data/processed/**
+data/external/**
+# keep directory placeholders + small documented reference maps
+!data/**/.gitkeep
+!data/external/README.md
+
+# --- results (regenerable; keep the folders, ignore heavy artifacts) ---
+results/models/**
+results/logs/**
+results/figures/**
+results/tables/**
+!results/**/.gitkeep
+
+# DrugBank is license-restricted: NEVER commit the XML/CSV.
+data/raw/drugbank/*.xml
+data/raw/drugbank/*.csv
+data/raw/drugbank/*.zip
+
+# dated run outputs and snapshots (large; same policy as data/ and results/)
+out_*/

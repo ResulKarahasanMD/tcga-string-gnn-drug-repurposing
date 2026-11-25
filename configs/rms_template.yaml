@@ -1,0 +1,39 @@
+# ==========================================================================================
+# RHABDOMYOSARCOMA (RMS) TEMPLATE — requires USER-SUPPLIED data (Section 36).
+#
+# ⚠️ TCGA has NO pediatric RMS cohort, and TCGA-SARC is NOT rhabdomyosarcoma.
+# This config does NOT auto-download RMS data. You must provide an RMS raw-count matrix
+# (genes x samples) + sample metadata from a legitimate source (TARGET-RT, St. Jude Cloud,
+# GEO/SRA, or a published RMS cohort) and place them where prepare_expression/build_string_graph
+# expect them (see src/repurpose_gnn/rms_adaptation.py -> adaptation_summary()).
+#
+# ANALYZE SUBTYPES SEPARATELY (make one COHORT per stratum):
+#   - embryonal RMS  (usually fusion-negative)   labels disease_id: MONDO_0009993
+#   - alveolar  RMS  (PAX3::FOXO1 / PAX7::FOXO1)  labels disease_id: MONDO_0009994
+#   - pan-RMS (only if underpowered to split)     labels disease_id: MONDO_0005212
+# Normal comparator is imperfect (adult muscle != myogenic progenitor) — interpret DE with care.
+# ==========================================================================================
+extends: default.yaml
+
+project:
+  cohort: RMS-ALVEOLAR          # e.g. RMS-ALVEOLAR / RMS-EMBRYONAL — one stratum per run
+
+# RMS data are NOT on the GDC via a 'TCGA-*' project; disable the TCGA downloader and supply
+# your own matrix. (Set gdc.* only if pulling TARGET-RT from the GDC with the appropriate project.)
+gdc:
+  # For TARGET-RT via GDC, set: project_id handling in tcga.py expects cfg.cohort; adapt as needed.
+  # Otherwise bypass download_tcga and provide filtered_counts.parquet + differential_expression_full.tsv.
+  workflow_type: "STAR - Counts"
+
+labels:
+  opentargets:
+    disease_id: MONDO_0009994   # alveolar RMS (verified against Open Targets); swap per stratum
+    min_association_score: 0.3  # RMS has fewer high-confidence targets than LUAD; consider lowering
+
+# Known/putative RMS-relevant targets for POSITIVE CONTROLS in drug ranking (verify at runtime;
+# NOT used as model labels). aRMS driver = PAX3/7::FOXO1 (undruggable directly) + downstream (e.g.
+# FGFR4, MYCN, ALK, IGF1R, CDK4/6). Bosutinib targets (ABL1/ABL2/SRC-family) verified separately.
+controls:
+  positive_targets: [FGFR4, MYCN, ALK, IGF1R, CDK4, CDK6, MET, PDGFRA]
+  positive_drugs_examples: []   # fill from literature for the chosen stratum
+  bosutinib_targets_to_verify: [ABL1, ABL2, SRC, LYN, HCK, FYN]  # verify each; do NOT assume equivalence
